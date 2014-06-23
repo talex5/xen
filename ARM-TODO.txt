@@ -1,0 +1,4 @@
+* gic request_irq implementation, currently all IRQs all hardcoded in gic irq handler.
+* bind_*
+* add multiple cpu support (?)
+* map_frames
