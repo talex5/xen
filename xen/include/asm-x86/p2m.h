@@ -647,6 +647,10 @@ static inline p2m_type_t p2m_flags_to_type(unsigned long flags)
      * 59-62 for iommu flags so we can't use them to store p2m type info. */
     return (flags >> 12) & 0x7f;
 }
+ 
+extern int arch_grant_map_page_identity(struct domain *d, unsigned long frame,
+                                 bool_t writeable);
+extern int arch_grant_unmap_page_identity(struct domain *d, unsigned long frame);
 
 /*
  * Nested p2m: shadow p2m tables used for nested HVM virtualization 

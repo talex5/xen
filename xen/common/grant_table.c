@@ -721,12 +721,10 @@ __gnttab_map_grant_ref(
 
     double_gt_lock(lgt, rgt);
 
-    if ( is_pv_domain(ld) && need_iommu(ld) )
+    if ( gnttab_need_iommu_mapping(ld) )
     {
         unsigned int wrc, rdc;
         int err = 0;
-        /* Shouldn't happen, because you can't use iommu in a HVM domain. */
-        BUG_ON(paging_mode_translate(ld));
         /* We're not translated, so we know that gmfns and mfns are
            the same things, so the IOMMU entry is always 1-to-1. */
         mapcount(lgt, rd, frame, &wrc, &rdc);
@@ -734,13 +732,23 @@ __gnttab_map_grant_ref(
              !(old_pin & (GNTPIN_hstw_mask|GNTPIN_devw_mask)) )
         {
             if ( wrc == 0 )
-                err = iommu_map_page(ld, frame, frame,
-                                     IOMMUF_readable|IOMMUF_writable);
+            {
+                if ( is_domain_direct_mapped(ld) )
+                    err = arch_grant_map_page_identity(ld, frame, 1);
+                else
+                    err = iommu_map_page(ld, frame, frame,
+                            IOMMUF_readable|IOMMUF_writable);
+            }
         }
         else if ( act_pin && !old_pin )
         {
             if ( (wrc + rdc) == 0 )
-                err = iommu_map_page(ld, frame, frame, IOMMUF_readable);
+            {
+                if ( is_domain_direct_mapped(ld) )
+                    err = arch_grant_map_page_identity(ld, frame, 0);
+                else
+                    err = iommu_map_page(ld, frame, frame, IOMMUF_readable);
+            }
         }
         if ( err )
         {
@@ -931,16 +939,25 @@ __gnttab_unmap_common(
             act->pin -= GNTPIN_hstw_inc;
     }
 
-    if ( is_pv_domain(ld) && need_iommu(ld) )
+    if ( gnttab_need_iommu_mapping(ld) )
     {
         unsigned int wrc, rdc;
         int err = 0;
-        BUG_ON(paging_mode_translate(ld));
         mapcount(lgt, rd, op->frame, &wrc, &rdc);
         if ( (wrc + rdc) == 0 )
-            err = iommu_unmap_page(ld, op->frame);
+        {
+            if ( is_domain_direct_mapped(ld) )
+                err = arch_grant_unmap_page_identity(ld, op->frame);
+            else
+                err = iommu_unmap_page(ld, op->frame);
+        }
         else if ( wrc == 0 )
-            err = iommu_map_page(ld, op->frame, op->frame, IOMMUF_readable);
+        {
+            if ( is_domain_direct_mapped(ld) )
+                err = arch_grant_map_page_identity(ld, op->frame, 0);
+            else
+                err = iommu_map_page(ld, op->frame, op->frame, IOMMUF_readable);
+        }
         if ( err )
         {
             rc = GNTST_general_error;

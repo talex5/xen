@@ -198,6 +198,7 @@ static lpae_t mfn_to_p2m_entry(unsigned long mfn, unsigned int mattr,
         e.p2m.write = 0;
         break;
 
+    case p2m_iommu_map_rw:
     case p2m_map_foreign:
     case p2m_grant_map_rw:
     case p2m_mmio_direct:
@@ -205,6 +206,7 @@ static lpae_t mfn_to_p2m_entry(unsigned long mfn, unsigned int mattr,
         e.p2m.write = 1;
         break;
 
+    case p2m_iommu_map_ro:
     case p2m_grant_map_ro:
     case p2m_invalid:
         e.p2m.xn = 1;
@@ -511,6 +513,32 @@ void guest_physmap_remove_page(struct domain *d,
                       pfn_to_paddr(mfn), MATTR_MEM, p2m_invalid);
 }
 
+int arch_grant_map_page_identity(struct domain *d, unsigned long frame,
+                                 bool_t writeable)
+{
+    p2m_type_t t;
+
+    ASSERT(is_domain_direct_mapped(d));
+
+    /* This is not an IOMMU mapping but it is not a regular RAM p2m type
+     * either. We are using IOMMU p2m types here to prevent the pages
+     * from being used as grants. */
+    if ( writeable )
+        t = p2m_iommu_map_rw;
+    else
+        t = p2m_iommu_map_ro;
+
+    return guest_physmap_add_entry(d, frame, frame, 0, t);
+}
+
+int arch_grant_unmap_page_identity(struct domain *d, unsigned long frame)
+{
+    ASSERT(is_domain_direct_mapped(d));
+
+    guest_physmap_remove_page(d, frame, frame, 0);
+    return 0;
+}
+
 int p2m_alloc_table(struct domain *d)
 {
     struct p2m_domain *p2m = &d->arch.p2m;
@@ -709,6 +737,17 @@ struct page_info *get_page_from_gva(struct domain *d, vaddr_t va,
 err:
     spin_unlock(&p2m->lock);
     return page;
+}
+
+int iommu_map_page(struct domain *d, unsigned long gfn, unsigned long mfn,
+                   unsigned int flags)
+{
+    return -ENOSYS;
+}
+
+int iommu_unmap_page(struct domain *d, unsigned long gfn)
+{
+    return -ENOSYS;
 }
 
 /*

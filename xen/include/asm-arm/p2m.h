@@ -45,6 +45,9 @@ typedef enum {
     p2m_map_foreign,    /* Ram pages from foreign domain */
     p2m_grant_map_rw,   /* Read/write grant mapping */
     p2m_grant_map_ro,   /* Read-only grant mapping */
+    /* The types below are only used to decide the page attribute in the P2M */
+    p2m_iommu_map_rw,   /* Read/write iommu mapping */
+    p2m_iommu_map_ro,   /* Read-only iommu mapping */
     p2m_max_real_type,  /* Types after this won't be store in the p2m */
 } p2m_type_t;
 
@@ -180,6 +183,10 @@ static inline int get_page_and_type(struct page_info *page,
 
     return rc;
 }
+
+int arch_grant_map_page_identity(struct domain *d, unsigned long frame,
+                                 bool_t writeable);
+int arch_grant_unmap_page_identity(struct domain *d, unsigned long frame);
 
 #endif /* _XEN_P2M_H */
 
