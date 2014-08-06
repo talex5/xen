@@ -325,8 +325,8 @@ struct netfront_dev *init_netfront(char *_nodename, void (*thenetif_rx)(unsigned
     dev->fd = -1;
 #endif
 
-    printk("net TX ring size %d\n", NET_TX_RING_SIZE);
-    printk("net RX ring size %d\n", NET_RX_RING_SIZE);
+    printk("net TX ring size %llu\n", (unsigned long long) NET_TX_RING_SIZE);
+    printk("net RX ring size %llu\n", (unsigned long long) NET_RX_RING_SIZE);
     init_SEMAPHORE(&dev->tx_sem, NET_TX_RING_SIZE);
     for(i=0;i<NET_TX_RING_SIZE;i++)
     {
